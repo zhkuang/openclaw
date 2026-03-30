@@ -18,6 +18,7 @@ Docs: https://docs.openclaw.ai
 - ACP/plugins: add an explicit default-off ACPX plugin-tools MCP bridge config, document the trust boundary, and harden the built-in bridge packaging/logging path so global installs and stdio MCP sessions work reliably. (#56867) Thanks @joe2643.
 - Docs/zh-CN: add a Chinese Diffs tool page so Chinese readers can access the full Diffs viewer, file-rendering, security, and troubleshooting docs. (#40773) Thanks @elliotllliu.
 - Docs/zh-CN: align the Chinese Diffs tool page with the current English source and generated translation metadata. Thanks @gumadeiras.
+- Plugins/hooks: add a blocking `pre_route` typed hook that can override route/session for the current inbound turn, enabling dynamic route provisioning to apply on the first inbound message instead of waiting for a follow-up turn.
 
 ### Fixes
 

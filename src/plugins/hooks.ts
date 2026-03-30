@@ -28,6 +28,9 @@ import type {
   PluginHookLlmInputEvent,
   PluginHookLlmOutputEvent,
   PluginHookBeforeResetEvent,
+  PluginHookPreRouteContext,
+  PluginHookPreRouteEvent,
+  PluginHookPreRouteResult,
   PluginHookBeforeToolCallEvent,
   PluginHookBeforeToolCallResult,
   PluginHookGatewayContext,
@@ -78,6 +81,9 @@ export type {
   PluginHookAgentEndEvent,
   PluginHookBeforeCompactionEvent,
   PluginHookBeforeResetEvent,
+  PluginHookPreRouteContext,
+  PluginHookPreRouteEvent,
+  PluginHookPreRouteResult,
   PluginHookInboundClaimContext,
   PluginHookInboundClaimEvent,
   PluginHookInboundClaimResult,
@@ -593,6 +599,18 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
     );
   }
 
+  /**
+   * Run pre_route hook.
+   * Allows plugins to synchronously route inbound turns before dispatch starts.
+   * First handler returning { handled: true } wins.
+   */
+  async function runPreRoute(
+    event: PluginHookPreRouteEvent,
+    ctx: PluginHookPreRouteContext,
+  ): Promise<PluginHookPreRouteResult | undefined> {
+    return runClaimingHook<"pre_route", PluginHookPreRouteResult>("pre_route", event, ctx);
+  }
+
   async function runInboundClaimForPlugin(
     pluginId: string,
     event: PluginHookInboundClaimEvent,
@@ -1048,6 +1066,7 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
     runAfterCompaction,
     runBeforeReset,
     // Message hooks
+    runPreRoute,
     runInboundClaim,
     runInboundClaimForPlugin,
     runInboundClaimForPluginOutcome,
