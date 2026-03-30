@@ -2429,6 +2429,64 @@ describe("dispatchReplyFromConfig", () => {
     });
   });
 
+  it("uses native command target session in pre_route hook context", async () => {
+    setNoAbort();
+    hookMocks.runner.hasHooks.mockImplementation(
+      ((hookName?: string) => hookName === "pre_route") as (hookName?: string) => boolean,
+    );
+    hookMocks.runner.runPreRoute.mockResolvedValue(undefined);
+
+    const dispatcher = createDispatcher();
+    const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
+      CommandSource: "native",
+      SessionKey: "discord:slash:owner",
+      CommandTargetSessionKey: "agent:codex-acp:session-target",
+      MessageSid: "msg-pre-route-native-context-1",
+    });
+
+    await dispatchReplyFromConfig({
+      ctx,
+      cfg: emptyConfig,
+      dispatcher,
+      replyResolver: async () => ({ text: "ok" }) satisfies ReplyPayload,
+    });
+
+    expect(hookMocks.runner.runPreRoute).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        sessionKey: "agent:codex-acp:session-target",
+      }),
+    );
+  });
+
+  it("preserves native command target session when pre_route does not override", async () => {
+    setNoAbort();
+    const dispatcher = createDispatcher();
+    const ctx = buildTestCtx({
+      Provider: "discord",
+      Surface: "discord",
+      CommandSource: "native",
+      SessionKey: "discord:slash:owner",
+      CommandTargetSessionKey: "agent:codex-acp:session-original",
+      MessageSid: "msg-native-target-preserve-1",
+    });
+
+    await dispatchReplyFromConfig({
+      ctx,
+      cfg: emptyConfig,
+      dispatcher,
+      replyResolver: async () => ({ text: "ok" }) satisfies ReplyPayload,
+    });
+
+    expect(sessionStoreMocks.resolveSessionStoreEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionKey: "agent:codex-acp:session-original",
+      }),
+    );
+  });
+
   it("continues dispatch when pre_route blocks past timeout", async () => {
     setNoAbort();
     vi.useFakeTimers();

@@ -193,6 +193,7 @@ export async function dispatchReplyFromConfig(params: {
   let resolvedSessionKey = ctx.SessionKey;
   let resolvedAccountId = ctx.AccountId;
   let resolvedRouteAgentId: string | undefined;
+  let didApplyPreRouteSessionOverride = false;
   const diagnosticsEnabled = isDiagnosticsEnabled(cfg);
   const channel = String(ctx.Surface ?? ctx.Provider ?? "unknown").toLowerCase();
   const chatId = ctx.To ?? ctx.From;
@@ -231,6 +232,9 @@ export async function dispatchReplyFromConfig(params: {
   }
 
   if (hookRunner?.hasHooks("pre_route")) {
+    const preRouteHookSessionKey =
+      (ctx.CommandSource === "native" ? ctx.CommandTargetSessionKey?.trim() : undefined) ??
+      resolvedSessionKey;
     const preRouteResult = await runPreRouteWithTimeout({
       timeoutMs: PRE_ROUTE_HOOK_TIMEOUT_MS,
       onTimeout: () => {
@@ -267,12 +271,13 @@ export async function dispatchReplyFromConfig(params: {
           },
           {
             ...inboundClaimContext,
-            sessionKey: resolvedSessionKey,
+            sessionKey: preRouteHookSessionKey,
           },
         ),
     });
 
     if (preRouteResult?.handled && preRouteResult.routeOverride?.sessionKey) {
+      didApplyPreRouteSessionOverride = true;
       resolvedSessionKey = preRouteResult.routeOverride.sessionKey;
       resolvedRouteAgentId = preRouteResult.routeOverride.agentId?.trim() || undefined;
       if (preRouteResult.routeOverride.accountId) {
@@ -304,6 +309,7 @@ export async function dispatchReplyFromConfig(params: {
   }
 
   const shouldSyncNativeCommandTargetSession =
+    didApplyPreRouteSessionOverride &&
     ctx.CommandSource === "native" &&
     resolvedSessionKey !== (ctx.CommandTargetSessionKey?.trim() || undefined);
   const effectiveCtx: FinalizedMsgContext =
