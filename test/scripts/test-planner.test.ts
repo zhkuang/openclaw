@@ -150,12 +150,12 @@ describe("test planner", () => {
     expect(plan.executionBudget.unitIsolatedWorkers).toBe(1);
     expect(plan.executionBudget.topLevelParallelLimitNoIsolate).toBe(4);
     expect(plan.executionBudget.topLevelParallelLimitIsolated).toBe(1);
-    expect(plan.topLevelParallelLimit).toBe(3);
+    expect(plan.topLevelParallelLimit).toBe(4);
     expect(plan.deferredRunConcurrency).toBe(1);
     artifacts.cleanupTempArtifacts();
   });
 
-  it("coalesces saturated high-memory local unit bursts into fewer shared batches", () => {
+  it("splits saturated high-memory local unit bursts into smaller shared batches", () => {
     const env = {
       RUNNER_OS: "macOS",
       OPENCLAW_TEST_HOST_CPU_COUNT: "16",
@@ -200,9 +200,9 @@ describe("test planner", () => {
 
     expect(plan.runtimeCapabilities.memoryBand).toBe("high");
     expect(plan.runtimeCapabilities.loadBand).toBe("saturated");
-    expect(sharedUnitBatches.length).toBeLessThan(baselineSharedUnitBatches.length);
+    expect(sharedUnitBatches.length).toBeGreaterThan(baselineSharedUnitBatches.length);
     expect(plan.executionBudget.unitIsolatedWorkers).toBe(1);
-    expect(plan.executionBudget.unitFastBatchTargetMs).toBe(90_000);
+    expect(plan.executionBudget.unitFastBatchTargetMs).toBe(22_500);
     artifacts.cleanupTempArtifacts();
   });
 
@@ -341,7 +341,7 @@ describe("test planner", () => {
     const explanation = explainExecutionTarget(
       {
         mode: "local",
-        fileFilters: ["src/infra/outbound/targets.channel-resolution.test.ts"],
+        fileFilters: ["src/infra/outbound/channel-resolution.test.ts"],
       },
       {
         env: {
@@ -358,7 +358,7 @@ describe("test planner", () => {
     const relativeExplanation = explainExecutionTarget(
       {
         mode: "local",
-        fileFilters: ["src/infra/outbound/targets.channel-resolution.test.ts"],
+        fileFilters: ["src/infra/outbound/channel-resolution.test.ts"],
       },
       {
         env: {
@@ -369,9 +369,7 @@ describe("test planner", () => {
     const absoluteExplanation = explainExecutionTarget(
       {
         mode: "local",
-        fileFilters: [
-          path.join(process.cwd(), "src/infra/outbound/targets.channel-resolution.test.ts"),
-        ],
+        fileFilters: [path.join(process.cwd(), "src/infra/outbound/channel-resolution.test.ts")],
       },
       {
         env: {
