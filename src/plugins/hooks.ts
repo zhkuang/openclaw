@@ -603,12 +603,38 @@ export function createHookRunner(registry: PluginRegistry, options: HookRunnerOp
    * Run pre_route hook.
    * Allows plugins to synchronously route inbound turns before dispatch starts.
    * First handler returning { handled: true } wins.
+   * Optional signal aborts between handler iterations so callers can bound
+   * in-flight executions when a timeout fires.
    */
   async function runPreRoute(
     event: PluginHookPreRouteEvent,
     ctx: PluginHookPreRouteContext,
+    signal?: AbortSignal,
   ): Promise<PluginHookPreRouteResult | undefined> {
-    return runClaimingHook<"pre_route", PluginHookPreRouteResult>("pre_route", event, ctx);
+    const hooks = getHooksForName(registry, "pre_route");
+    if (hooks.length === 0) {
+      return undefined;
+    }
+    logger?.debug?.(`[hooks] running pre_route (${hooks.length} handlers, first-claim wins)`);
+    for (const hook of hooks) {
+      if (signal?.aborted) {
+        return undefined;
+      }
+      try {
+        const handlerResult = await (
+          hook.handler as (
+            event: unknown,
+            ctx: unknown,
+          ) => Promise<PluginHookPreRouteResult | void>
+        )(event, ctx);
+        if (handlerResult?.handled) {
+          return handlerResult;
+        }
+      } catch (err) {
+        handleHookError({ hookName: "pre_route", pluginId: hook.pluginId, error: err });
+      }
+    }
+    return undefined;
   }
 
   async function runInboundClaimForPlugin(

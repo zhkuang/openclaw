@@ -59,17 +59,19 @@ let ttsRuntimePromise: Promise<typeof import("../../tts/tts.runtime.js")> | null
 const PRE_ROUTE_HOOK_TIMEOUT_MS = 8_000;
 
 async function runPreRouteWithTimeout<T>(params: {
-  run: () => Promise<T>;
+  run: (signal: AbortSignal) => Promise<T>;
   timeoutMs: number;
   onTimeout: () => void;
 }): Promise<T | undefined> {
+  const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      params.run(),
+      params.run(controller.signal),
       new Promise<undefined>((resolve) => {
         timeoutId = setTimeout(() => {
           params.onTimeout();
+          controller.abort();
           resolve(undefined);
         }, params.timeoutMs);
       }),
@@ -242,7 +244,7 @@ export async function dispatchReplyFromConfig(params: {
           `dispatch-from-config: pre_route exceeded ${PRE_ROUTE_HOOK_TIMEOUT_MS}ms; continuing with current route`,
         );
       },
-      run: () =>
+      run: (signal) =>
         hookRunner.runPreRoute(
           {
             from: hookContext.from,
@@ -273,6 +275,7 @@ export async function dispatchReplyFromConfig(params: {
             ...inboundClaimContext,
             sessionKey: preRouteHookSessionKey,
           },
+          signal,
         ),
     });
 
