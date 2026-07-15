@@ -19,7 +19,18 @@ const LINUX_SMB_SUPER_MAGIC = 0x517b;
 const LINUX_CIFS_SUPER_MAGIC = 0xff534d42;
 const LINUX_SMB2_SUPER_MAGIC = 0xfe534d42;
 const PROC_MOUNTINFO_PATH = "/proc/self/mountinfo";
-const NETWORK_FILESYSTEM_TYPES = new Set(["cifs", "smbfs", "smb2", "smb3"]);
+// These network filesystems expose local paths but cannot rely on SQLite WAL
+// shared-memory locking semantics across mounted clients.
+const NETWORK_FILESYSTEM_TYPES = new Set([
+  "cifs",
+  "fuse.juicefs",
+  "fuse.seaweedfs",
+  "juicefs",
+  "seaweedfs",
+  "smbfs",
+  "smb2",
+  "smb3",
+]);
 
 type IntervalHandle = ReturnType<typeof setInterval> & {
   unref?: () => void;
